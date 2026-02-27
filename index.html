@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>I Love You</title>
+
+  <style>
+    /* =========================================================
+
+    
+    ========================================================== */
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+
+    body{
+      margin:0;
+      display:grid;
+      place-items:center;
+      overflow:hidden;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color:#fff;
+      background:#e3c29e;
+    }
+
+    /* =========================================================
+      BACKGROUND EFFECT LAYERS (all decorative)
+    ========================================================== */
+
+    /* 1) Pouring hearts (behind everything) */
+    .hearts{
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      overflow:hidden;
+      z-index:0;
+    }
+    .heart{
+      position:absolute;
+      top:-80px;
+      left: var(--x);
+      width: 16px;
+      height: 16px;
+
+      transform: rotate(45deg) scale(var(--s));
+      background: rgba(255, 105, 180, 0.85);
+      filter: drop-shadow(0 0 12px rgba(120, 60, 40, 0.22));
+      opacity: 0;
+
+      animation: pour var(--t) linear forwards;
+      animation-delay: var(--d);
+    }
+    .heart::before,
+    .heart::after{
+      content:"";
+      position:absolute;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: inherit;
+    }
+    .heart::before{ left:-8px; top:0; }
+    .heart::after { left:0; top:-8px; }
+
+    @keyframes pour{
+      0%{
+        transform: translateY(0) translateX(0) rotate(45deg) rotate(var(--r)) scale(var(--s));
+        opacity: 0;
+      }
+      10%{ opacity: 0.95; }
+      100%{
+        transform: translateY(120vh) translateX(var(--dx)) rotate(45deg) rotate(calc(var(--r) + 240deg)) scale(var(--s));
+        opacity: 0;
+      }
+    }
+
+    /* 2) Sparkles (twinkling dots) */
+    .sparkles{
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      z-index:1; /* above pouring hearts */
+      opacity: 0.9;
+    }
+    .sparkle{
+      position:absolute;
+      width: var(--sz);
+      height: var(--sz);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.75);
+      box-shadow:
+        0 0 14px rgba(255,255,255,0.35),
+        0 0 26px rgba(255, 79, 163, 0.16);
+      opacity: 0;
+      animation: twinkle var(--tw) ease-in-out infinite;
+      animation-delay: var(--td);
+      transform: translateZ(0);
+    }
+    @keyframes twinkle{
+      0%, 100% { opacity: 0; transform: scale(0.35); }
+      45%      { opacity: 0.85; transform: scale(1.05); }
+      55%      { opacity: 0.6; transform: scale(0.9); }
+    }
+
+    /* 3) Big moving heart (drifts + beats) */
+    .big-heart{
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      z-index:2; /* above sparkles, below card */
+      opacity: 0.36;
+      filter: drop-shadow(0 0 26px rgba(255, 79, 163, 0.38));
+    }
+
+    /* Drift wrapper animates position across the screen */
+    .big-heart .drift{
+      position:absolute;
+      left: 50%;
+      top: 50%;
+      width: 240px;
+      height: 240px;
+      transform: translate(-50%, -50%);
+      animation: drift 12s ease-in-out infinite;
+      will-change: transform;
+    }
+
+    /* Heart shape animates “beat” without fighting the drift transform */
+    .big-heart .shape{
+      position:absolute;
+      inset:0;
+      transform: rotate(45deg) scale(1);
+      background: rgba(255, 79, 163, 0.55);
+      border-radius: 26px;
+      animation: beat 1.35s ease-in-out infinite;
+      will-change: transform;
+    }
+    .big-heart .shape::before,
+    .big-heart .shape::after{
+      content:"";
+      position:absolute;
+      width: 240px;
+      height: 240px;
+      border-radius: 50%;
+      background: rgba(255, 79, 163, 0.55);
+    }
+    .big-heart .shape::before{ left: -120px; top: 0; }
+    .big-heart .shape::after { left: 0; top: -120px; }
+
+    @keyframes drift{
+      0%   { transform: translate(-50%, -50%) translate(-120px, -70px) rotate(-6deg) scale(1); }
+      25%  { transform: translate(-50%, -50%) translate(140px, -90px)  rotate(5deg)  scale(1.05); }
+      50%  { transform: translate(-50%, -50%) translate(170px, 120px)  rotate(-4deg) scale(0.98); }
+      75%  { transform: translate(-50%, -50%) translate(-150px, 140px) rotate(6deg)  scale(1.03); }
+      100% { transform: translate(-50%, -50%) translate(-120px, -70px) rotate(-6deg) scale(1); }
+    }
+
+    /* Heartbeat pulse */
+    @keyframes beat{
+      0%, 100% { transform: rotate(45deg) scale(1); }
+      18%      { transform: rotate(45deg) scale(1.07); }
+      34%      { transform: rotate(45deg) scale(1.02); }
+      52%      { transform: rotate(45deg) scale(1.09); }
+      72%      { transform: rotate(45deg) scale(1.00); }
+    }
+
+    /* 4) Click burst layer (hearts pop around click) */
+    .burst-layer{
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      z-index:2; /* same as big heart, still behind card */
+      overflow:hidden;
+    }
+    .burst-heart{
+      position:fixed;
+      width: 12px;
+      height: 12px;
+      transform: rotate(45deg);
+      background: rgba(255, 79, 163, 0.92);
+      filter: drop-shadow(0 0 12px rgba(255, 79, 163, 0.35));
+      opacity: 0.95;
+    }
+    .burst-heart::before,
+    .burst-heart::after{
+      content:"";
+      position:absolute;
+      width: 12px;
+      height: 12px;
+      border-radius:50%;
+      background: inherit;
+    }
+    .burst-heart::before{ left:-6px; top:0; }
+    .burst-heart::after { left:0; top:-6px; }
+
+    /* =========================================================
+      MAIN CARD
+    ========================================================== */
+    main{
+      position:relative;
+      z-index:3;
+      width:min(92vw, 760px);
+      padding: 34px 28px;
+      border-radius: 26px;
+      text-align:center;
+
+      background: rgba(61, 35, 20, 0.22);
+      border: 1px solid rgba(255, 255, 255, 0.30);
+      box-shadow: 0 22px 70px rgba(0,0,0,0.30);
+      backdrop-filter: blur(10px);
+
+      animation: float 5s ease-in-out infinite, glow 4.5s ease-in-out infinite;
+      overflow:hidden; /* so the shine effect stays inside */
+    }
+
+    /* Shine sweep across the card (extra animation) */
+    main::after{
+      content:"";
+      position:absolute;
+      top:-40%;
+      left:-60%;
+      width: 55%;
+      height: 180%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.16), transparent);
+      transform: rotate(18deg);
+      animation: shine 5.8s ease-in-out infinite;
+      pointer-events:none;
+      opacity: 0.65;
+    }
+
+    @keyframes shine{
+      0%   { left:-70%; opacity:0.0; }
+      18%  { opacity:0.55; }
+      40%  { left:120%; opacity:0.0; }
+      100% { left:120%; opacity:0.0; }
+    }
+
+    @keyframes glow{
+      0%, 100% { box-shadow: 0 22px 70px rgba(0,0,0,0.30); }
+      50%      { box-shadow: 0 26px 80px rgba(0,0,0,0.36); }
+    }
+
+    .ring{
+      position:absolute;
+      inset:-2px;
+      border-radius: 28px;
+      pointer-events:none;
+      background:
+        radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.20), transparent 60%),
+        radial-gradient(circle at 75% 80%, rgba(255, 155, 180, 0.16), transparent 60%);
+      filter: blur(10px);
+      opacity: 0.9;
+    }
+
+    .small{
+      margin:0 0 8px;
+      opacity:0.9;
+      letter-spacing:0.3px;
+    }
+
+    h1{
+      margin: 10px 0 0;
+      font-size: clamp(2.2rem, 4vw, 3.4rem);
+      letter-spacing: 0.5px;
+      text-shadow: 0 0 18px rgba(0,0,0,0.18);
+    }
+
+    /* LOVE letters pink + pulsing */
+    .love{
+      color: #ff4fa3;
+      text-shadow: 0 0 16px rgba(255, 79, 163, 0.45);
+      display:inline-block;
+      animation: lovePulse 1.25s ease-in-out infinite;
+    }
+    @keyframes lovePulse{
+      0%, 100% { transform: translateY(0) scale(1); filter: brightness(1); }
+      50%      { transform: translateY(-1px) scale(1.06); filter: brightness(1.08); }
+    }
+
+    .cursor{
+      display:inline-block;
+      margin-left:6px;
+      animation: blink 0.9s steps(1) infinite;
+      opacity: 0.95;
+    }
+
+    .sub{
+      margin: 14px auto 18px;
+      max-width: 54ch;
+      line-height: 1.6;
+      opacity:0.95;
+      color: rgba(255,255,255,0.92);
+    }
+
+    .btn{
+      appearance:none;
+      border:none;
+      cursor:pointer;
+      border-radius: 999px;
+      padding: 12px 18px;
+      font-weight: 800;
+      color: #2b170d;
+      background: linear-gradient(90deg, #fff1e2, #f7dcc1);
+      box-shadow: 0 14px 34px rgba(0,0,0,0.22);
+      transition: transform 140ms ease, filter 140ms ease;
+    }
+    .btn:hover{ transform: translateY(-2px); filter: brightness(1.03); }
+    .btn:active{ transform: translateY(0) scale(0.98); }
+
+    .note{
+      margin: 14px 0 0;
+      min-height: 1.2em;
+      opacity: 0.95;
+      color: rgba(255,255,255,0.95);
+    }
+
+    @keyframes blink{
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
+    @keyframes float{
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-8px); }
+    }
+
+    /* Accessibility: reduce motion */
+    @media (prefers-reduced-motion: reduce){
+      * { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Pouring hearts (deep background) -->
+  <div class="hearts" aria-hidden="true" id="heartsLayer"></div>
+
+  <!-- Sparkles (twinkle layer) -->
+  <div class="sparkles" aria-hidden="true" id="sparklesLayer"></div>
+
+  <!-- Big moving heart (drift + beat) -->
+  <div class="big-heart" aria-hidden="true">
+    <div class="drift">
+      <div class="shape"></div>
+    </div>
+  </div>
+
+  <!-- Click burst hearts layer -->
+  <div class="burst-layer" aria-hidden="true" id="burstLayer"></div>
+
+  <main>
+    <div class="ring" aria-hidden="true"></div>
+
+    <p class="small">Just a little message for you 💌</p>
+
+    <h1 aria-label="Huy love Ai">
+      <span id="message"></span><span class="cursor" aria-hidden="true">|</span>
+    </h1>
+
+    <p class="sub">
+      You make my days brighter, my heart calmer, and my smile easier.
+    </p>
+
+    <button class="btn" id="btn" type="button">Click for more love ✨</button>
+    <p class="note" id="note" role="status" aria-live="polite"></p>
+  </main>
+
+  <script>
+    /* =========================================================
+      JS:
+      - Typewriter text with pink LOVE
+      - Random love lines on button click
+      - Pouring hearts spawner
+      - Sparkles generator
+      - Click anywhere: heart burst animation
+    ========================================================== */
+
+    // ---------- Elements ----------
+    const messageEl = document.getElementById("message");
+    const noteEl = document.getElementById("note");
+    const btn = document.getElementById("btn");
+    const heartsLayer = document.getElementById("heartsLayer");
+    const sparklesLayer = document.getElementById("sparklesLayer");
+    const burstLayer = document.getElementById("burstLayer");
+
+    // ---------- Typewriter with pink "love" ----------
+    const fullText = "Huy love Ái ";
+    let i = 0;
+
+    function escapeHTML(str){
+      return str
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    // Render helper: styles the first "love" occurrence as pink span
+    function renderWithPinkLove(text){
+      const idx = text.toLowerCase().indexOf("love");
+      if (idx === -1) {
+        messageEl.textContent = text;
+        return;
+      }
+      const before = text.slice(0, idx);
+      const loveWord = text.slice(idx, idx + 4);
+      const after = text.slice(idx + 4);
+
+      messageEl.innerHTML =
+        escapeHTML(before) +
+        `<span class="love">${escapeHTML(loveWord)}</span>` +
+        escapeHTML(after);
+    }
+
+    function typeMainMessage(){
+      if (i <= fullText.length){
+        renderWithPinkLove(fullText.slice(0, i));
+        i += 1;
+        setTimeout(typeMainMessage, 80);
+      }
+    }
+    typeMainMessage();
+
+    // ---------- Random love lines ----------
+    const extraLines = [
+      "Anh luôn bên cạnh ủng hộ và bảo vệ em 🫶",
+      "I’m proud of you, always ✨",
+      "とても愛してる 💗",
+      "My heart chooses you, every day. 🌿",
+      "Stay close to me. 👫"
+    ];
+
+    function showRandomLove(){
+      const line = extraLines[Math.floor(Math.random() * extraLines.length)];
+      noteEl.textContent = line;
+
+      // Tiny “pop” animation
+      noteEl.animate(
+        [
+          { transform: "scale(1)", opacity: 0.85 },
+          { transform: "scale(1.05)", opacity: 1 },
+          { transform: "scale(1)", opacity: 0.95 }
+        ],
+        { duration: 450, easing: "ease-out" }
+      );
+    }
+    btn.addEventListener("click", showRandomLove);
+
+    // ---------- Pouring hearts spawner ----------
+    function spawnPourHeart(){
+      const h = document.createElement("span");
+      h.className = "heart";
+
+      // Spawn zones: left edge / right edge / anywhere on top
+      const zoneRoll = Math.random();
+      let xPercent;
+
+      if (zoneRoll < 0.42) xPercent = Math.random() * 14;            // left band
+      else if (zoneRoll < 0.84) xPercent = 86 + Math.random() * 14;  // right band
+      else xPercent = Math.random() * 100;                            // anywhere
+
+      // Drift outward on edges; random in center
+      let dx;
+      if (xPercent < 20) dx = -(20 + Math.random() * 60);
+      else if (xPercent > 80) dx = (20 + Math.random() * 60);
+      else dx = (Math.random() * 120 - 60);
+
+      const s = (0.7 + Math.random() * 1.2).toFixed(2);
+      const t = (4.6 + Math.random() * 3.2).toFixed(2) + "s";
+      const d = (Math.random() * 0.8).toFixed(2) + "s";
+      const r = (Math.random() * 120 - 60).toFixed(0) + "deg";
+
+      h.style.setProperty("--x", xPercent.toFixed(2) + "%");
+      h.style.setProperty("--dx", dx.toFixed(0) + "px");
+      h.style.setProperty("--s", s);
+      h.style.setProperty("--t", t);
+      h.style.setProperty("--d", d);
+      h.style.setProperty("--r", r);
+
+      heartsLayer.appendChild(h);
+
+      // Cleanup after animation finishes
+      const totalMs = (parseFloat(t) + parseFloat(d)) * 1000 + 400;
+      setTimeout(() => h.remove(), totalMs);
+    }
+
+    // Start with a burst + continuous pour
+    for (let k = 0; k < 18; k++) setTimeout(spawnPourHeart, k * 120);
+    setInterval(spawnPourHeart, 140);
+
+    // ---------- Sparkles generator (static elements with looping animation) ----------
+    function createSparkles(count = 42){
+      for (let n = 0; n < count; n++){
+        const s = document.createElement("span");
+        s.className = "sparkle";
+
+        const x = Math.random() * 100;
+        const y = Math.random() * 100;
+
+        const size = (2 + Math.random() * 4).toFixed(1) + "px";      // 2px - 6px
+        const tw = (2.2 + Math.random() * 3.6).toFixed(2) + "s";     // 2.2s - 5.8s
+        const td = (Math.random() * 5.0).toFixed(2) + "s";           // 0s - 5s
+
+        s.style.left = x.toFixed(2) + "%";
+        s.style.top = y.toFixed(2) + "%";
+        s.style.setProperty("--sz", size);
+        s.style.setProperty("--tw", tw);
+        s.style.setProperty("--td", td);
+
+        sparklesLayer.appendChild(s);
+      }
+    }
+    createSparkles();
+
+    // ---------- Click anywhere: heart burst ----------
+    function burstHearts(clientX, clientY){
+      const amount = 10;
+
+      for (let n = 0; n < amount; n++){
+        const h = document.createElement("span");
+        h.className = "burst-heart";
+
+        // Place at click point (centered)
+        h.style.left = (clientX - 6) + "px";
+        h.style.top = (clientY - 6) + "px";
+
+        burstLayer.appendChild(h);
+
+        // Random direction + distance
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 40 + Math.random() * 70; // 40-110px
+        const dx = Math.cos(angle) * dist;
+        const dy = Math.sin(angle) * dist;
+
+        const scale = 0.7 + Math.random() * 1.0;
+
+        // Animate using Web Animations API
+        const anim = h.animate(
+          [
+            { transform: `rotate(45deg) translate(0px, 0px) scale(${scale})`, opacity: 0.95 },
+            { transform: `rotate(45deg) translate(${dx}px, ${dy}px) scale(${scale * 0.65})`, opacity: 0 }
+          ],
+          { duration: 700 + Math.random() * 400, easing: "cubic-bezier(.2,.9,.2,1)" }
+        );
+
+        anim.onfinish = () => h.remove();
+      }
+    }
+
+    // Click anywhere (including on card) = burst hearts
+    document.addEventListener("click", (e) => {
+      // If user prefers reduced motion, don’t do burst animations.
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      burstHearts(e.clientX, e.clientY);
+    });
+  </script>
+</body>
+
+</html>
